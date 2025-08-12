@@ -1,123 +1,182 @@
-# Fontizi Backend
+# Fontizi Backend - Storia AI
 
-A Node.js backend server for font identification using Hugging Face's inference API.
+A Flask-based backend service for font recognition using Storia AI local model.
 
 ## Features
 
-- Image upload and processing
-- Font identification using AI model
-- CORS support for frontend integration
-- File size validation and cleanup
-- Error handling and logging
+- **Font Recognition**: Identify fonts from uploaded images using Storia AI
+- **Google Fonts Integration**: Search and download fonts from Google Fonts
+- **Local Processing**: No API calls required - runs completely offline
+- **RESTful API**: Clean API endpoints for frontend integration
+- **File Upload**: Support for multiple image formats
+- **CORS Support**: Cross-origin resource sharing enabled
 
-## Setup
+## Quick Start
 
-1. **Install dependencies:**
+1. **Install Dependencies**:
 
    ```bash
-   cd backend
-   npm install
+   pip install -r requirements.txt
    ```
 
-2. **Environment Configuration:**
+2. **Set up Environment**:
 
    ```bash
    cp env.example .env
+   # Edit .env with your configuration
    ```
 
-   Edit `.env` file and add your Hugging Face API token:
+3. **Start the Server**:
 
-   ```
-   HF_API_TOKEN=your_huggingface_api_token_here
-   PORT=3001
-   CORS_ORIGIN=http://localhost:5173
+   ```bash
+   python start_storia.py
    ```
 
-3. **Get Hugging Face API Token:**
-   - Go to [Hugging Face](https://huggingface.co/settings/tokens)
-   - Create a new token
-   - Add it to your `.env` file
-
-## Running the Server
-
-**Development mode:**
-
-```bash
-npm run dev
-```
-
-**Production mode:**
-
-```bash
-npm start
-```
-
-The server will start on `http://localhost:3001`
+4. **Access the API**:
+   - Server runs on: `http://localhost:3001`
+   - Health check: `GET /health`
+   - Font recognition: `POST /api/storia/identify-font`
 
 ## API Endpoints
 
-### Health Check
+### Font Recognition (Storia AI)
+
+- `POST /api/storia/identify-font` - Identify font from uploaded image
+- `GET /api/storia/status` - Check Storia AI model status
+- `GET /api/fonts` - Get list of available fonts
+- `GET /api/model/info` - Get model information
+
+### Google Fonts Integration
+
+- `GET /api/google-fonts/search?q=<query>` - Search Google Fonts
+- `POST /api/google-fonts/download` - Download font files
+- `GET /api/google-fonts/preview?font_family=<name>` - Get font preview
+
+## Configuration
+
+Edit the `.env` file to configure:
+
+- `STORIA_MODEL_PATH` - Path to Storia AI model (default: ./storia_model)
+- `GOOGLE_FONTS_API_KEY` - Google Fonts API key (optional)
+- `FLASK_DEBUG` - Enable debug mode
+- `PORT` - Server port (default: 3001)
+
+## Project Structure
 
 ```
-GET /health
+backend/
+├── storia_server.py        # Main Flask server
+├── storia_font_service.py  # Storia AI and Google Fonts service
+├── start_storia.py         # Startup script
+├── requirements.txt        # Python dependencies
+├── env.example            # Environment configuration example
+├── uploads/               # Temporary file uploads
+├── storia_model/          # Storia AI model (auto-downloaded)
+└── README.md             # This file
 ```
 
-Returns server status and timestamp.
+## Storia AI Model
 
-### Font Identification
+The Storia AI model is an open-source local model that provides:
 
+- **High Accuracy**: Advanced font recognition capabilities
+- **Offline Processing**: No internet connection required
+- **Multiple Categories**: Support for serif, sans-serif, and decorative fonts
+- **Automatic Setup**: Model is automatically downloaded on first use
+
+### Model Setup
+
+The Storia AI model will be automatically downloaded from the official repository:
+
+- Repository: https://github.com/Storia-AI/font-classify
+- Location: `./storia_model/`
+- Size: ~500MB (first download)
+
+## Development
+
+### Starting the Server
+
+```bash
+# Using startup script (recommended)
+python start_storia.py
+
+# Direct server start
+python storia_server.py
 ```
-POST /api/identify-font
+
+### Checking Model Status
+
+```bash
+curl http://localhost:3001/api/storia/status
 ```
 
-**Request:**
+## Integration
 
-- Content-Type: `multipart/form-data`
-- Body: `image` file (max 10MB)
+This backend is designed to work with the Fontizi frontend. See `FRONTEND_INTEGRATION.md` for detailed integration instructions.
 
-**Response:**
+## Troubleshooting
+
+### Model Not Found
+
+If the Storia AI model is not available:
+
+1. Check internet connection for first download
+2. Verify `STORIA_MODEL_PATH` in `.env`
+3. Check available disk space (~500MB required)
+
+### Dependencies Issues
+
+If you encounter dependency issues:
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt --force-reinstall
+```
+
+## Performance
+
+- **Inference Speed**: ~200-500ms per image
+- **Accuracy**: High accuracy for common fonts
+- **Offline Support**: ✅ Yes (no internet required after setup)
+- **Resource Usage**: Moderate (local GPU/CPU processing)
+
+## API Response Format
+
+### Font Recognition Response
 
 ```json
 {
   "success": true,
-  "fontName": "Arial",
-  "confidence": 0.95,
-  "fontDownloadUrl": "https://fonts.google.com/specimen/Arial",
-  "allPredictions": [
+  "font": "arial",
+  "confidence": 0.85,
+  "category": "Sans-serif",
+  "alternatives": [
+    { "font": "helvetica", "confidence": 0.12 },
+    { "font": "verdana", "confidence": 0.03 }
+  ]
+}
+```
+
+### Google Fonts Search Response
+
+```json
+{
+  "success": true,
+  "fonts": [
     {
-      "label": "Arial",
-      "score": 0.95
-    },
-    {
-      "label": "Helvetica",
-      "score": 0.03
+      "family": "Roboto",
+      "category": "sans-serif",
+      "variants": ["300", "regular", "500", "700"],
+      "subsets": ["latin"],
+      "version": "v30",
+      "lastModified": "2023-01-25"
     }
   ]
 }
 ```
 
-## Error Responses
+## References
 
-- `400` - No image file provided or file too large
-- `500` - Font identification failed or internal server error
-
-## File Upload
-
-- Supported formats: All image types (JPEG, PNG, GIF, etc.)
-- Maximum file size: 10MB
-- Files are automatically cleaned up after processing
-
-## Font Database
-
-The backend includes a basic font database with download URLs. You can expand this by adding more fonts to the `fontDatabase` object in `server.js`.
-
-## CORS Configuration
-
-The server is configured to accept requests from `http://localhost:5173` (Vite dev server). Update the `CORS_ORIGIN` in your `.env` file if needed.
-
-## Development
-
-- Uses ES modules
-- Includes error handling middleware
-- Automatic file cleanup
-- Detailed logging for debugging
+- [Storia AI Repository](https://github.com/Storia-AI/font-classify)
+- [Google Fonts API](https://developers.google.com/fonts/docs/css2)
+- [Flask Documentation](https://flask.palletsprojects.com/)

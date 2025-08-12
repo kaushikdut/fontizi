@@ -123,6 +123,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
 
     try {
+      // Set global loading state
+      set({ isLoading: true, error: null });
+
       const result = await identifyFontService(screenshot.file);
 
       // Update with font result
@@ -130,14 +133,29 @@ export const useAppStore = create<AppState>((set, get) => ({
         screenshots: state.screenshots.map((s) =>
           s.id === id ? { ...s, fontResult: result, isIdentifying: false } : s
         ),
+        isLoading: false,
       }));
     } catch (error) {
+      let errorMessage = "Font identification failed";
+
+      if (error instanceof Error) {
+        if (error.message.includes("timeout")) {
+          errorMessage =
+            "Request timed out. The AI model is taking longer than expected. Please try again.";
+        } else if (error.message.includes("Network Error")) {
+          errorMessage =
+            "Network error. Please check your connection and try again.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
       set((state) => ({
         screenshots: state.screenshots.map((s) =>
           s.id === id ? { ...s, isIdentifying: false } : s
         ),
-        error:
-          error instanceof Error ? error.message : "Font identification failed",
+        isLoading: false,
+        error: errorMessage,
       }));
     }
   },

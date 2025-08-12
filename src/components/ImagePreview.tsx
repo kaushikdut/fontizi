@@ -2,6 +2,7 @@ import { X, Upload, Crop, Eye, Sparkles, Loader2 } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
 import { useRef } from "react";
 import { FontResult } from "./FontResult";
+import { LoadingSpinner } from "./LoadingSpinner";
 
 export const ImagePreview = () => {
   const {
@@ -13,6 +14,8 @@ export const ImagePreview = () => {
     clearError,
     identifyFont,
     backendConnected,
+    isLoading,
+    setLoading,
   } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,6 +67,11 @@ export const ImagePreview = () => {
     identifyFont(latestScreenshot.id);
   };
 
+  const handleCancelIdentification = () => {
+    setLoading(false);
+    setError("Font identification was cancelled");
+  };
+
   return (
     <div className="w-full max-w-2xl mx-auto">
       <input
@@ -73,6 +81,18 @@ export const ImagePreview = () => {
         onChange={(e) => handleFileSelect(e.target.files)}
         className="hidden"
       />
+
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <LoadingSpinner
+            message="Analyzing font with AI..."
+            showProgress={true}
+            progress={50}
+            onCancel={handleCancelIdentification}
+          />
+        </div>
+      )}
 
       <div className="relative border-2 border-dashed border-gray-300 rounded-3xl p-8 text-center bg-white/80 backdrop-blur-sm shadow-lg">
         {/* Preview Image */}
