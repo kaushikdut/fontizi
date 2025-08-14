@@ -28,6 +28,20 @@ export interface FontIdentificationResult {
       confidence: number;
     }>;
   };
+  // Enhanced features
+  metadata?: {
+    filename: string;
+    upload_timestamp: string;
+    file_size: number;
+    preprocessing_status: string;
+    confidence_threshold_used: number;
+  };
+  enhancement_info?: {
+    text_regions_detected: number;
+    confidence_threshold: number;
+    prediction_method: string;
+  };
+  error?: string;
 }
 
 export interface FontIdentificationError {
@@ -58,17 +72,21 @@ export interface ModelInfo {
   };
 }
 
-// Storia AI and Google Fonts interfaces
+// Enhanced Storia AI interfaces
 export interface StoriaFontInfo {
   primary_font: string;
   confidence: number;
+  confidence_level: string;
   alternatives: Array<{
     name: string;
     confidence: number;
     category: string;
+    confidence_level: string;
   }>;
   font_category: string;
   download_url?: string;
+  text_regions_detected: number;
+  prediction_quality: string;
   google_fonts_info?: {
     family: string;
     category: string;
@@ -85,6 +103,26 @@ export interface StoriaFontResult {
   file_size?: number;
   service: string;
   font_info?: StoriaFontInfo;
+  raw_predictions?: Array<{
+    font: string;
+    confidence: number;
+    class: string;
+    version: string;
+    confidence_level: string;
+    count: number;
+  }>;
+  enhancement_info?: {
+    text_regions_detected: number;
+    confidence_threshold: number;
+    prediction_method: string;
+  };
+  metadata?: {
+    filename: string;
+    upload_timestamp: string;
+    file_size: number;
+    preprocessing_status: string;
+    confidence_threshold_used: number;
+  };
   error?: string;
 }
 
@@ -122,57 +160,122 @@ export interface FontPreviewResult {
   sample_text: string;
 }
 
+// Enhanced font identification with confidence threshold support
 export const identifyFont = async (
-  imageFile: File
+  imageFile: File,
+  confidenceThreshold?: number
 ): Promise<FontIdentificationResult> => {
   try {
     const formData = new FormData();
     formData.append("image", imageFile);
+    
+    // Add confidence threshold if provided
+    if (confidenceThreshold !== undefined) {
+      formData.append("confidence_threshold", confidenceThreshold.toString());
+    }
 
-    const response = await apiClient.post("/api/identify-font", formData, {
+    const response = await apiClient.post("/api/storia/identify-font", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
       timeout: 120000, // 2 minutes specifically for font identification
     });
 
-    const data: FontIdentificationResult = response.data;
+    const data: StoriaFontResult = response.data;
 
-    // Transform response to match existing interface
-    // Handle both old and new response formats
-    if (data.prediction) {
-      // Old format with prediction object
+    // Transform enhanced response to match existing interface
+    if (data.success && data.font_info) {
       return {
         success: data.success,
-        filename: data.filename,
-        file_size: data.file_size,
+        filename: data.metadata?.filename,
+        file_size: data.metadata?.file_size,
+        font: data.font_info.primary_font,
+        confidence: data.font_info.confidence,
+        category: data.font_info.font_category,
+        alternatives: data.font_info.alternatives,
+        download_url: data.font_info.download_url,
+        metadata: data.metadata,
+        enhancement_info: data.enhancement_info,
         prediction: {
-          font: data.prediction.font,
-          confidence: data.prediction.confidence,
-          category: data.prediction.category,
-          alternatives: data.prediction.alternatives,
+          font: data.font_info.primary_font,
+          confidence: data.font_info.confidence,
+          category: data.font_info.font_category,
+          alternatives: data.font_info.alternatives?.map(alt => ({
+            font: alt.name,
+            confidence: alt.confidence,
+          })),
         },
       };
     } else {
-      // New format with font info at root level
       return {
-        success: data.success,
-        filename: data.filename,
-        file_size: data.file_size,
-        prediction: {
-          font: data.font || "Unknown",
-          confidence: data.confidence || 0.0,
-          category: data.category || "Unknown",
-          alternatives:
-            data.alternatives?.map((alt) => ({
-              font: alt.name,
-              confidence: alt.confidence,
-            })) || [],
-        },
+        success: false,
+        error: data.error || "Font identification failed",
       };
     }
   } catch (error) {
     console.error("Font identification failed:", error);
+    if (error instanceof Error) {
+      throw error;
+    } else {
+      throw new Error("Font identification failed");
+    }
+  }
+};
+
+// Base64 image identification
+export const identifyFontBase64 = async (
+  base64Image: string,
+  confidenceThreshold?: number
+): Promise<FontIdentificationResult> => {
+  try {
+    const payload: any = {
+      image: base64Image,
+    };
+    
+    if (confidenceThreshold !== undefined) {
+      payload.confidence_threshold = confidenceThreshold;
+    }
+
+    const response = await apiClient.post("/api/storia/identify-font-base64", payload, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      timeout: 120000,
+    });
+
+    const data: StoriaFontResult = response.data;
+
+    // Transform enhanced response to match existing interface
+    if (data.success && data.font_info) {
+      return {
+        success: data.success,
+        filename: data.metadata?.filename,
+        file_size: data.metadata?.file_size,
+        font: data.font_info.primary_font,
+        confidence: data.font_info.confidence,
+        category: data.font_info.font_category,
+        alternatives: data.font_info.alternatives,
+        download_url: data.font_info.download_url,
+        metadata: data.metadata,
+        enhancement_info: data.enhancement_info,
+        prediction: {
+          font: data.font_info.primary_font,
+          confidence: data.font_info.confidence,
+          category: data.font_info.font_category,
+          alternatives: data.font_info.alternatives?.map(alt => ({
+            font: alt.name,
+            confidence: alt.confidence,
+          })),
+        },
+      };
+    } else {
+      return {
+        success: false,
+        error: data.error || "Font identification failed",
+      };
+    }
+  } catch (error) {
+    console.error("Base64 font identification failed:", error);
     if (error instanceof Error) {
       throw error;
     } else {
@@ -201,13 +304,18 @@ export const getAvailableFonts = async (): Promise<FontDatabase> => {
   }
 };
 
-// Storia AI Font Recognition
+// Enhanced Storia AI Font Recognition
 export const identifyFontWithStoria = async (
-  imageFile: File
+  imageFile: File,
+  confidenceThreshold?: number
 ): Promise<StoriaFontResult> => {
   try {
     const formData = new FormData();
     formData.append("image", imageFile);
+    
+    if (confidenceThreshold !== undefined) {
+      formData.append("confidence_threshold", confidenceThreshold.toString());
+    }
 
     const response = await apiClient.post(
       "/api/storia/identify-font",
@@ -272,7 +380,7 @@ export const getFontPreview = async (
 ): Promise<FontPreviewResult> => {
   try {
     const response = await apiClient.get(
-      `/api/google-fonts/preview?font_name=${encodeURIComponent(
+      `/api/fonts/preview?font_name=${encodeURIComponent(
         fontName
       )}&text=${encodeURIComponent(text)}`
     );
@@ -284,19 +392,54 @@ export const getFontPreview = async (
   }
 };
 
-// Storia AI Model Status
+// Enhanced Storia AI Model Status
 export interface StoriaModelStatus {
   available: boolean;
   model_path: string;
   google_fonts_configured: boolean;
+  enhanced_features: {
+    text_region_detection: boolean;
+    confidence_thresholding: boolean;
+    image_enhancement: boolean;
+    ensemble_predictions: boolean;
+  };
+  confidence_thresholds: {
+    min_confidence: number;
+    high_confidence: number;
+  };
 }
 
 export const getStoriaModelStatus = async (): Promise<StoriaModelStatus> => {
   try {
     const response = await apiClient.get("/api/storia/status");
-    return response.data;
+    return response.data.status;
   } catch (error) {
     console.error("Failed to get Storia model status:", error);
+    throw error;
+  }
+};
+
+// Accuracy feedback endpoint
+export interface AccuracyFeedback {
+  actual_font?: string;
+  predicted_font?: string;
+  confidence?: number;
+  image_quality?: string;
+  feedback?: string;
+}
+
+export const submitAccuracyFeedback = async (
+  feedback: AccuracyFeedback
+): Promise<{ success: boolean; message: string; feedback_id: string }> => {
+  try {
+    const response = await apiClient.post("/api/accuracy/improve", feedback, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Failed to submit accuracy feedback:", error);
     throw error;
   }
 };

@@ -7,13 +7,17 @@ import {
   ExternalLink,
   CheckCircle,
   XCircle,
+  Target,
+  Zap,
+  Eye,
+  TrendingUp,
 } from "lucide-react";
 import type {
   FontIdentificationResult,
   StoriaFontResult,
   FontDownloadResult,
 } from "../services/fontIdentification";
-import { downloadGoogleFont } from "../services/fontIdentification";
+import { downloadGoogleFont, submitAccuracyFeedback } from "../services/fontIdentification";
 
 interface EnhancedFontResultProps {
   result: FontIdentificationResult | StoriaFontResult;
@@ -24,12 +28,14 @@ interface EnhancedFontResultProps {
 export const EnhancedFontResult = ({
   result,
   onRetry,
-  service = "deepfont",
+  service = "storia",
 }: EnhancedFontResultProps) => {
   const [downloadStatus, setDownloadStatus] = useState<
     "idle" | "downloading" | "success" | "error"
   >("idle");
   const [downloadMessage, setDownloadMessage] = useState<string>("");
+  const [showFeedback, setShowFeedback] = useState<boolean>(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState<boolean>(false);
 
   const isStoriaResult = "service" in result && result.service === "Storia AI";
 
@@ -39,15 +45,19 @@ export const EnhancedFontResult = ({
       return {
         name: result.font_info.primary_font,
         confidence: result.font_info.confidence,
+        confidenceLevel: result.font_info.confidence_level,
         category: result.font_info.font_category,
         alternatives: result.font_info.alternatives,
         downloadUrl: result.font_info.download_url,
         googleFontsInfo: result.font_info.google_fonts_info,
+        textRegionsDetected: result.font_info.text_regions_detected,
+        predictionQuality: result.font_info.prediction_quality,
       };
     } else if ("prediction" in result) {
       return {
         name: result.prediction.font,
         confidence: result.prediction.confidence,
+        confidenceLevel: result.confidence >= 0.7 ? "high" : result.confidence >= 0.3 ? "medium" : "low",
         category: result.prediction.category,
         alternatives: result.prediction.alternatives,
         downloadUrl: `https://fonts.google.com/specimen/${result.prediction.font.replace(
@@ -55,12 +65,15 @@ export const EnhancedFontResult = ({
           "+"
         )}`,
         googleFontsInfo: null,
+        textRegionsDetected: result.enhancement_info?.text_regions_detected || 0,
+        predictionQuality: result.confidence >= 0.7 ? "excellent" : result.confidence >= 0.5 ? "good" : "fair",
       };
     } else if (result.font && result.confidence) {
       // Handle new response format with font info at root level
       return {
         name: result.font,
         confidence: result.confidence,
+        confidenceLevel: result.confidence >= 0.7 ? "high" : result.confidence >= 0.3 ? "medium" : "low",
         category: result.category || "Unknown",
         alternatives:
           result.alternatives?.map((alt) => ({
@@ -75,6 +88,8 @@ export const EnhancedFontResult = ({
             "+"
           )}`,
         googleFontsInfo: null,
+        textRegionsDetected: result.enhancement_info?.text_regions_detected || 0,
+        predictionQuality: result.confidence >= 0.7 ? "excellent" : result.confidence >= 0.5 ? "good" : "fair",
       };
     }
     return null;
@@ -99,33 +114,49 @@ export const EnhancedFontResult = ({
     );
   }
 
-  const confidencePercentage = Math.round(fontInfo.confidence * 100);
-  const fontName =
-    fontInfo.name.charAt(0).toUpperCase() + fontInfo.name.slice(1);
+  const getConfidenceColor = (level: string) => {
+    switch (level) {
+      case "high":
+        return "text-green-600 bg-green-50 border-green-200";
+      case "medium":
+        return "text-yellow-600 bg-yellow-50 border-yellow-200";
+      case "low":
+        return "text-red-600 bg-red-50 border-red-200";
+      default:
+        return "text-gray-600 bg-gray-50 border-gray-200";
+    }
+  };
+
+  const getQualityColor = (quality: string) => {
+    switch (quality) {
+      case "excellent":
+        return "text-green-600 bg-green-50 border-green-200";
+      case "good":
+        return "text-blue-600 bg-blue-50 border-blue-200";
+      case "fair":
+        return "text-yellow-600 bg-yellow-50 border-yellow-200";
+      case "poor":
+        return "text-red-600 bg-red-50 border-red-200";
+      default:
+        return "text-gray-600 bg-gray-50 border-gray-200";
+    }
+  };
 
   const handleDownload = async () => {
+    if (!fontInfo.downloadUrl) return;
+
     setDownloadStatus("downloading");
     setDownloadMessage("Downloading font...");
 
     try {
       const downloadResult = await downloadGoogleFont(fontInfo.name);
-
-      if (downloadResult.success && downloadResult.download_info) {
+      
+      if (downloadResult.success) {
         setDownloadStatus("success");
-        setDownloadMessage(
-          `Font downloaded successfully! (${(
-            downloadResult.download_info.file_size / 1024
-          ).toFixed(1)} KB)`
-        );
-
-        // Auto-clear success message after 5 seconds
-        setTimeout(() => {
-          setDownloadStatus("idle");
-          setDownloadMessage("");
-        }, 5000);
+        setDownloadMessage("Font downloaded successfully!");
       } else {
         setDownloadStatus("error");
-        setDownloadMessage(downloadResult.message || "Download failed");
+        setDownloadMessage("Download failed. Please try again.");
       }
     } catch (error) {
       setDownloadStatus("error");
@@ -133,174 +164,202 @@ export const EnhancedFontResult = ({
     }
   };
 
+  const handleFeedbackSubmit = async (feedback: any) => {
+    try {
+      await submitAccuracyFeedback({
+        predicted_font: fontInfo.name,
+        confidence: fontInfo.confidence,
+        feedback: feedback.comment,
+      });
+      setFeedbackSubmitted(true);
+      setShowFeedback(false);
+    } catch (error) {
+      console.error("Failed to submit feedback:", error);
+    }
+  };
+
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-200/50 shadow-lg">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
-            Font Identified
-          </h3>
-          <div className="flex items-center space-x-2">
-            <Sparkles className="w-5 h-5 text-blue-600" />
-            <span className="text-sm text-gray-600">
-              {isStoriaResult ? "Storia AI" : "DeepFont"} AI-powered
-              identification
-            </span>
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold text-blue-600">{fontName}</div>
-          <div className="text-sm text-gray-500">
-            {confidencePercentage}% confidence
-          </div>
-        </div>
+      {/* Enhanced Features Badge */}
+      <div className="flex items-center space-x-2 mb-4">
+        <Sparkles className="w-4 h-4 text-blue-600" />
+        <span className="text-sm font-medium text-blue-700">
+          Enhanced AI Recognition
+        </span>
       </div>
 
-      {/* Font Category */}
-      <div className="mb-4">
-        <div className="inline-flex items-center space-x-2 bg-gray-100 px-3 py-1 rounded-full">
-          <Info className="w-4 h-4 text-gray-600" />
-          <span className="text-sm text-gray-700">
-            Category: {fontInfo.category}
-          </span>
-        </div>
-      </div>
-
-      {/* Confidence Bar */}
+      {/* Main Result */}
       <div className="mb-6">
-        <div className="flex justify-between text-sm text-gray-600 mb-2">
-          <span>Confidence</span>
-          <span>{confidencePercentage}%</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div
-            className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${confidencePercentage}%` }}
-          ></div>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="mb-6 space-y-3">
-        {/* Google Fonts Link */}
-        {fontInfo.downloadUrl && (
-          <a
-            href={fontInfo.downloadUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white px-4 py-2 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg"
-          >
-            <ExternalLink className="w-4 h-4" />
-            <span>View on Google Fonts</span>
-          </a>
-        )}
-
-        {/* Download Button */}
-        {fontInfo.googleFontsInfo && (
-          <button
-            onClick={handleDownload}
-            disabled={downloadStatus === "downloading"}
-            className="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download className="w-4 h-4" />
-            <span>
-              {downloadStatus === "downloading"
-                ? "Downloading..."
-                : "Download Font"}
-            </span>
-          </button>
-        )}
-
-        {/* Download Status */}
-        {downloadStatus !== "idle" && (
-          <div
-            className={`flex items-center space-x-2 text-sm ${
-              downloadStatus === "success"
-                ? "text-green-600"
-                : downloadStatus === "error"
-                ? "text-red-600"
-                : "text-blue-600"
-            }`}
-          >
-            {downloadStatus === "success" && (
-              <CheckCircle className="w-4 h-4" />
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              {fontInfo.name}
+            </h3>
+            <p className="text-gray-600 mb-3">{fontInfo.category}</p>
+            
+            {/* Enhanced Metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <div className={`px-3 py-2 rounded-lg border text-sm font-medium ${getConfidenceColor(fontInfo.confidenceLevel)}`}>
+                <div className="flex items-center space-x-1">
+                  <Target className="w-3 h-3" />
+                  <span>Confidence: {fontInfo.confidenceLevel}</span>
+                </div>
+                <div className="text-xs mt-1">
+                  {(fontInfo.confidence * 100).toFixed(1)}%
+                </div>
+              </div>
+              
+              <div className={`px-3 py-2 rounded-lg border text-sm font-medium ${getQualityColor(fontInfo.predictionQuality)}`}>
+                <div className="flex items-center space-x-1">
+                  <TrendingUp className="w-3 h-3" />
+                  <span>Quality: {fontInfo.predictionQuality}</span>
+                </div>
+              </div>
+              
+              <div className="px-3 py-2 rounded-lg border text-sm font-medium text-blue-600 bg-blue-50 border-blue-200">
+                <div className="flex items-center space-x-1">
+                  <Eye className="w-3 h-3" />
+                  <span>Text Regions: {fontInfo.textRegionsDetected}</span>
+                </div>
+              </div>
+              
+              <div className="px-3 py-2 rounded-lg border text-sm font-medium text-purple-600 bg-purple-50 border-purple-200">
+                <div className="flex items-center space-x-1">
+                  <Zap className="w-3 h-3" />
+                  <span>Enhanced</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex flex-col space-y-2">
+            {fontInfo.downloadUrl && (
+              <button
+                onClick={handleDownload}
+                disabled={downloadStatus === "downloading"}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download</span>
+              </button>
             )}
-            {downloadStatus === "error" && <XCircle className="w-4 h-4" />}
-            <span>{downloadMessage}</span>
+            
+            <button
+              onClick={() => setShowFeedback(!showFeedback)}
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              <Info className="w-4 h-4" />
+              <span>Feedback</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Success/Error Messages */}
+        {downloadStatus === "success" && (
+          <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
+            <CheckCircle className="w-4 h-4 text-green-600" />
+            <span className="text-green-700 text-sm">{downloadMessage}</span>
+          </div>
+        )}
+
+        {downloadStatus === "error" && (
+          <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+            <XCircle className="w-4 h-4 text-red-600" />
+            <span className="text-red-700 text-sm">{downloadMessage}</span>
+          </div>
+        )}
+
+        {/* Feedback Form */}
+        {showFeedback && !feedbackSubmitted && (
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <h4 className="font-medium text-gray-900 mb-2">Help Improve Accuracy</h4>
+            <textarea
+              placeholder="Was this prediction correct? Any feedback to help improve accuracy?"
+              className="w-full p-3 border border-gray-300 rounded-lg resize-none"
+              rows={3}
+            />
+            <div className="flex space-x-2 mt-2">
+              <button
+                onClick={() => handleFeedbackSubmit({ comment: "Correct prediction" })}
+                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+              >
+                Correct
+              </button>
+              <button
+                onClick={() => handleFeedbackSubmit({ comment: "Incorrect prediction" })}
+                className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+              >
+                Incorrect
+              </button>
+              <button
+                onClick={() => setShowFeedback(false)}
+                className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {feedbackSubmitted && (
+          <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
+            <CheckCircle className="w-4 h-4 text-green-600" />
+            <span className="text-green-700 text-sm">Thank you for your feedback!</span>
           </div>
         )}
       </div>
 
-      {/* Font Variants (Storia AI only) */}
-      {isStoriaResult && fontInfo.googleFontsInfo && (
-        <div className="mb-6">
-          <h4 className="text-sm font-semibold text-gray-700 mb-3">
-            Available Variants
-          </h4>
-          <div className="flex flex-wrap gap-2">
-            {fontInfo.googleFontsInfo.variants
-              .slice(0, 6)
-              .map((variant, index) => (
-                <span
-                  key={index}
-                  className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-md"
-                >
-                  {variant}
-                </span>
-              ))}
-            {fontInfo.googleFontsInfo.variants.length > 6 && (
-              <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-md">
-                +{fontInfo.googleFontsInfo.variants.length - 6} more
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Alternative Predictions */}
+      {/* Alternatives */}
       {fontInfo.alternatives && fontInfo.alternatives.length > 0 && (
-        <div>
-          <h4 className="text-sm font-semibold text-gray-700 mb-3">
-            Alternative Matches
-          </h4>
+        <div className="mb-6">
+          <h4 className="text-lg font-semibold text-gray-900 mb-3">Alternative Fonts</h4>
           <div className="space-y-2">
-            {fontInfo.alternatives.map((prediction, index) => (
+            {fontInfo.alternatives.slice(0, 5).map((alt, index) => (
               <div
                 key={index}
-                className="flex justify-between items-center text-sm"
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
               >
-                <span className="text-gray-600">
-                  {prediction.name || prediction.font}
-                </span>
-                <span className="text-gray-500">
-                  {Math.round((prediction.confidence || 0) * 100)}%
-                </span>
+                <div>
+                  <p className="font-medium text-gray-900">{alt.name}</p>
+                  <p className="text-sm text-gray-600">{alt.category}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-900">
+                    {(alt.confidence * 100).toFixed(1)}%
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {alt.confidence_level || (alt.confidence >= 0.7 ? "high" : alt.confidence >= 0.3 ? "medium" : "low")}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* File Information */}
-      {result.filename && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="text-xs text-gray-500">
-            <div>File: {result.filename}</div>
-            {result.file_size && (
-              <div>Size: {(result.file_size / 1024).toFixed(1)} KB</div>
-            )}
+      {/* Enhanced Metadata */}
+      {result.metadata && (
+        <div className="bg-gray-50 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-gray-900 mb-2">Analysis Details</h4>
+          <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+            <div>File: {result.metadata.filename}</div>
+            <div>Size: {(result.metadata.file_size / 1024).toFixed(1)} KB</div>
+            <div>Threshold: {(result.metadata.confidence_threshold_used * 100).toFixed(0)}%</div>
+            <div>Status: {result.metadata.preprocessing_status}</div>
           </div>
         </div>
       )}
 
       {/* Retry Button */}
       {onRetry && (
-        <button
-          onClick={onRetry}
-          className="mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium"
-        >
-          Try again
-        </button>
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <button
+            onClick={onRetry}
+            className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
       )}
     </div>
   );

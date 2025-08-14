@@ -1,7 +1,7 @@
-import { X, Upload, Crop, Eye, Sparkles, Loader2 } from "lucide-react";
+import { X, Upload, Crop, Eye, Sparkles, Loader2, Target } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
 import { useRef } from "react";
-import { FontResult } from "./FontResult";
+import { EnhancedFontResult } from "./EnhancedFontResult";
 import { LoadingSpinner } from "./LoadingSpinner";
 
 export const ImagePreview = () => {
@@ -16,6 +16,7 @@ export const ImagePreview = () => {
     backendConnected,
     isLoading,
     setLoading,
+    defaultConfidenceThreshold,
   } = useAppStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,7 +65,7 @@ export const ImagePreview = () => {
   };
 
   const handleIdentifyFont = () => {
-    identifyFont(latestScreenshot.id);
+    identifyFont(latestScreenshot.id, latestScreenshot.confidenceThreshold);
   };
 
   const handleCancelIdentification = () => {
@@ -86,7 +87,7 @@ export const ImagePreview = () => {
       {isLoading && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
           <LoadingSpinner
-            message="Analyzing font with AI..."
+            message="Analyzing font with Enhanced AI..."
             showProgress={true}
             progress={50}
             onCancel={handleCancelIdentification}
@@ -141,6 +142,15 @@ export const ImagePreview = () => {
             {latestScreenshot.uploadedAt.toLocaleTimeString()}
           </p>
 
+          {/* Confidence Threshold Info */}
+          <div className="flex items-center justify-center space-x-2 mb-4 text-sm text-gray-600">
+            <Target className="w-4 h-4" />
+            <span>
+              Confidence Threshold:{" "}
+              {(defaultConfidenceThreshold * 100).toFixed(0)}%
+            </span>
+          </div>
+
           {/* Action Buttons */}
           <div className="flex items-center justify-center space-x-4">
             <button
@@ -162,7 +172,7 @@ export const ImagePreview = () => {
               )}
               <span>
                 {latestScreenshot.isIdentifying
-                  ? "Identifying..."
+                  ? "Analyzing with Enhanced AI..."
                   : "Identify Font"}
               </span>
             </button>
@@ -176,12 +186,13 @@ export const ImagePreview = () => {
           </div>
         </div>
 
-        {/* Font Result */}
+        {/* Enhanced Font Result */}
         {latestScreenshot.fontResult && (
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <FontResult
+            <EnhancedFontResult
               result={latestScreenshot.fontResult}
               onRetry={handleIdentifyFont}
+              service="storia"
             />
           </div>
         )}

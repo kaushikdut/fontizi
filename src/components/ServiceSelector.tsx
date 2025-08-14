@@ -1,142 +1,103 @@
-import React from "react";
-import { Sparkles, Zap, Info } from "lucide-react";
+import React, { useState } from "react";
+import { Settings, Sparkles, Target, Info } from "lucide-react";
+import { useAppStore } from "../store/useAppStore";
 
-export type FontService = "deepfont" | "storia";
+export const ServiceSelector = () => {
+  const { defaultConfidenceThreshold, setDefaultConfidenceThreshold } = useAppStore();
+  const [showConfig, setShowConfig] = useState(false);
 
-interface ServiceSelectorProps {
-  selectedService: FontService;
-  onServiceChange: (service: FontService) => void;
-  disabled?: boolean;
-}
-
-export const ServiceSelector = ({
-  selectedService,
-  onServiceChange,
-  disabled = false,
-}: ServiceSelectorProps) => {
-  const services = [
-    {
-      id: "deepfont" as FontService,
-      name: "DeepFont",
-      description: "Local AI model with fast processing",
-      icon: Sparkles,
-      features: ["Fast processing", "No API costs", "Offline capable"],
-      color: "from-blue-500 to-indigo-600",
-    },
-    {
-      id: "storia" as FontService,
-      name: "Storia AI",
-      description: "Open-source local font recognition model",
-      icon: Zap,
-      features: [
-        "Higher accuracy",
-        "Google Fonts integration",
-        "Font downloads",
-        "Completely free",
-      ],
-      color: "from-purple-500 to-pink-600",
-    },
-  ];
+  const handleConfidenceChange = (value: number) => {
+    setDefaultConfidenceThreshold(value);
+  };
 
   return (
-    <div className="mb-6">
-      <div className="flex items-center space-x-2 mb-4">
-        <Info className="w-5 h-5 text-gray-600" />
-        <h3 className="text-lg font-semibold text-gray-900">
-          Choose Recognition Service
-        </h3>
+    <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-gray-200/50">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
+            <Sparkles className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Enhanced AI Service</h3>
+            <p className="text-sm text-gray-600">Storia AI with advanced features</p>
+          </div>
+        </div>
+        
+        <button
+          onClick={() => setShowConfig(!showConfig)}
+          className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <Settings className="w-5 h-5" />
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {services.map((service) => {
-          const Icon = service.icon;
-          const isSelected = selectedService === service.id;
+      {/* Enhanced Features List */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="flex items-center space-x-2 text-sm">
+          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+          <span className="text-gray-700">Text Region Detection</span>
+        </div>
+        <div className="flex items-center space-x-2 text-sm">
+          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+          <span className="text-gray-700">Confidence Filtering</span>
+        </div>
+        <div className="flex items-center space-x-2 text-sm">
+          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+          <span className="text-gray-700">Image Enhancement</span>
+        </div>
+        <div className="flex items-center space-x-2 text-sm">
+          <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+          <span className="text-gray-700">Ensemble Predictions</span>
+        </div>
+      </div>
 
-          return (
-            <button
-              key={service.id}
-              onClick={() => onServiceChange(service.id)}
-              disabled={disabled}
-              className={`
-                relative p-4 rounded-xl border-2 transition-all duration-200 text-left
-                ${
-                  isSelected
-                    ? `border-blue-500 bg-gradient-to-r ${service.color} text-white shadow-lg`
-                    : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-md"
-                }
-                ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
-              `}
-            >
-              {/* Selection indicator */}
-              {isSelected && (
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                </div>
-              )}
+      {/* Configuration Panel */}
+      {showConfig && (
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center space-x-2 mb-2">
+                <Target className="w-4 h-4 text-gray-600" />
+                <label className="text-sm font-medium text-gray-700">
+                  Confidence Threshold: {(defaultConfidenceThreshold * 100).toFixed(0)}%
+                </label>
+              </div>
+              <input
+                type="range"
+                min="0.1"
+                max="0.9"
+                step="0.1"
+                value={defaultConfidenceThreshold}
+                onChange={(e) => handleConfidenceChange(parseFloat(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>10% (More Results)</span>
+                <span>90% (Higher Accuracy)</span>
+              </div>
+            </div>
 
-              <div className="flex items-start space-x-3">
-                <div
-                  className={`
-                  p-2 rounded-lg
-                  ${isSelected ? "bg-white/20" : "bg-gray-100"}
-                `}
-                >
-                  <Icon
-                    className={`w-5 h-5 ${
-                      isSelected ? "text-white" : "text-gray-600"
-                    }`}
-                  />
-                </div>
-
-                <div className="flex-1">
-                  <h4
-                    className={`font-semibold mb-1 ${
-                      isSelected ? "text-white" : "text-gray-900"
-                    }`}
-                  >
-                    {service.name}
-                  </h4>
-                  <p
-                    className={`text-sm mb-3 ${
-                      isSelected ? "text-white/90" : "text-gray-600"
-                    }`}
-                  >
-                    {service.description}
-                  </p>
-
-                  {/* Features list */}
-                  <ul className="space-y-1">
-                    {service.features.map((feature, index) => (
-                      <li
-                        key={index}
-                        className={`text-xs flex items-center space-x-1 ${
-                          isSelected ? "text-white/80" : "text-gray-500"
-                        }`}
-                      >
-                        <div
-                          className={`w-1 h-1 rounded-full ${
-                            isSelected ? "bg-white/60" : "bg-gray-400"
-                          }`}
-                        ></div>
-                        <span>{feature}</span>
-                      </li>
-                    ))}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-start space-x-2">
+                <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-blue-800">
+                  <p className="font-medium mb-1">Confidence Threshold Guide:</p>
+                  <ul className="space-y-1 text-xs">
+                    <li>• <strong>10-30%:</strong> More results, may include less accurate predictions</li>
+                    <li>• <strong>30-50%:</strong> Balanced accuracy and coverage (Recommended)</li>
+                    <li>• <strong>50-90%:</strong> Higher accuracy, fewer results</li>
                   </ul>
                 </div>
               </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Service-specific notes */}
-      <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-        <div className="text-sm text-blue-800">
-          <strong>Note:</strong>
-          {selectedService === "storia"
-            ? " Storia AI is an open-source model that runs locally. The model will be automatically downloaded and set up on first use."
-            : " DeepFont uses a local AI model and doesn't require external API keys."}
+            </div>
+          </div>
         </div>
+      )}
+
+      {/* Status Indicator */}
+      <div className="flex items-center space-x-2 text-sm text-green-600">
+        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+        <span>Enhanced features enabled</span>
       </div>
     </div>
   );

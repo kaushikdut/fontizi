@@ -30,6 +30,8 @@ def check_dependencies():
         try:
             if package == 'PIL':
                 import PIL
+            elif package == 'opencv-python':
+                import cv2
             else:
                 __import__(package.replace('-', '_'))
             print(f"  ✅ {package}")
