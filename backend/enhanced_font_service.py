@@ -128,42 +128,31 @@ class EnhancedFontService:
         Run enhanced inference using the improved prediction script
         """
         try:
-            # Use enhanced predict script
-            enhanced_script = os.path.join(self.storia_model_path, 'enhanced_predict.py')
+            # Use improved predict script with better preprocessing
+            improved_script = os.path.join(self.storia_model_path, 'improved_predict.py')
             
-            # If enhanced script doesn't exist, fall back to regular predict
-            if not os.path.exists(enhanced_script):
-                logger.warning("Enhanced predict script not found, using regular predict")
+            if os.path.exists(improved_script):
+                logger.info("Using improved predict script for better accuracy")
+                result = subprocess.run([
+                    'python', improved_script,
+                    image_path,
+                    '--top-k', '10',
+                    '--output', 'json'
+                ], capture_output=True, text=True, check=True)
+                
+                predictions_data = json.loads(result.stdout)
+                
+                if predictions_data.get("success", False):
+                    return predictions_data
+                else:
+                    logger.warning("Improved predict failed, falling back to regular")
+                    return self._run_regular_inference(image_path)
+            else:
+                logger.warning("Improved predict script not found, using regular")
                 return self._run_regular_inference(image_path)
             
-            result = subprocess.run([
-                'python', enhanced_script,
-                image_path,
-                '--top-k', '10',
-                '--confidence-threshold', str(confidence_threshold),
-                '--output', 'json'
-            ], capture_output=True, text=True, check=True)
-            
-            predictions_data = json.loads(result.stdout)
-            
-            if predictions_data.get("success", False):
-                return predictions_data
-            else:
-                return {
-                    "success": False,
-                    "error": predictions_data.get("error", "Unknown error"),
-                    "predictions": None
-                }
-                
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Enhanced inference failed: {e.stderr}")
-            # Fall back to regular inference
-            return self._run_regular_inference(image_path)
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse enhanced output: {e}")
-            return self._run_regular_inference(image_path)
         except Exception as e:
-            logger.error(f"Error running enhanced inference: {e}")
+            logger.error(f"Error running improved inference: {e}")
             return self._run_regular_inference(image_path)
     
     def _run_regular_inference(self, image_path: str) -> Dict:
@@ -185,7 +174,7 @@ class EnhancedFontService:
                 predictions = []
                 for pred in predictions_data.get("predictions", []):
                     predictions.append({
-                        'font_name': pred.get('font', 'Unknown'),
+                        'font': pred.get('font', 'Unknown'),
                         'confidence': pred.get('confidence', 0.0),
                         'category': self._get_font_category(pred.get('font', 'Unknown')),
                         'confidence_level': self._get_confidence_level(pred.get('confidence', 0.0))
@@ -263,7 +252,6 @@ class EnhancedFontService:
             
             # Use raw_predictions if available, otherwise fall back to predictions
             if raw_predictions:
-                predictions_to_process = raw_predictions
                 # Convert raw_predictions format to expected format
                 processed_predictions = []
                 for pred in raw_predictions:
