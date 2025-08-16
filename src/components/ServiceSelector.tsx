@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Settings, Sparkles, Target, Info } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
 
 export const ServiceSelector = () => {
-  const { defaultConfidenceThreshold, setDefaultConfidenceThreshold } = useAppStore();
+  const { defaultConfidenceThreshold, setDefaultConfidenceThreshold } =
+    useAppStore();
   const [showConfig, setShowConfig] = useState(false);
 
   const handleConfidenceChange = (value: number) => {
@@ -18,11 +19,15 @@ export const ServiceSelector = () => {
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Enhanced AI Service</h3>
-            <p className="text-sm text-gray-600">Storia AI with advanced features</p>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Enhanced AI Service
+            </h3>
+            <p className="text-sm text-gray-600">
+              Storia AI with advanced features
+            </p>
           </div>
         </div>
-        
+
         <button
           onClick={() => setShowConfig(!showConfig)}
           className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -59,7 +64,8 @@ export const ServiceSelector = () => {
               <div className="flex items-center space-x-2 mb-2">
                 <Target className="w-4 h-4 text-gray-600" />
                 <label className="text-sm font-medium text-gray-700">
-                  Confidence Threshold: {(defaultConfidenceThreshold * 100).toFixed(0)}%
+                  Confidence Threshold:{" "}
+                  {(defaultConfidenceThreshold * 100).toFixed(0)}%
                 </label>
               </div>
               <input
@@ -68,7 +74,9 @@ export const ServiceSelector = () => {
                 max="0.9"
                 step="0.1"
                 value={defaultConfidenceThreshold}
-                onChange={(e) => handleConfidenceChange(parseFloat(e.target.value))}
+                onChange={(e) =>
+                  handleConfidenceChange(parseFloat(e.target.value))
+                }
                 className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
@@ -81,11 +89,21 @@ export const ServiceSelector = () => {
               <div className="flex items-start space-x-2">
                 <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                 <div className="text-sm text-blue-800">
-                  <p className="font-medium mb-1">Confidence Threshold Guide:</p>
+                  <p className="font-medium mb-1">
+                    Confidence Threshold Guide:
+                  </p>
                   <ul className="space-y-1 text-xs">
-                    <li>• <strong>10-30%:</strong> More results, may include less accurate predictions</li>
-                    <li>• <strong>30-50%:</strong> Balanced accuracy and coverage (Recommended)</li>
-                    <li>• <strong>50-90%:</strong> Higher accuracy, fewer results</li>
+                    <li>
+                      • <strong>10-30%:</strong> More results, may include less
+                      accurate predictions
+                    </li>
+                    <li>
+                      • <strong>30-50%:</strong> Balanced accuracy and coverage
+                      (Recommended)
+                    </li>
+                    <li>
+                      • <strong>50-90%:</strong> Higher accuracy, fewer results
+                    </li>
                   </ul>
                 </div>
               </div>

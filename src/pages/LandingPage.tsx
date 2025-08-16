@@ -11,7 +11,7 @@ import { Type, Sparkles, Zap, Upload, Crop } from "lucide-react";
 
 export const LandingPage = () => {
   const { screenshots, currentCropImage } = useAppStore();
-  const [showCropper, setShowCropper] = useState<boolean>(false);
+  const [_showCropper, setShowCropper] = useState<boolean>(false);
 
   const handleCloseCropper = () => {
     setShowCropper(false);
@@ -72,8 +72,9 @@ export const LandingPage = () => {
           </h2>
 
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed">
-            Upload screenshots, crop text regions, and let our enhanced AI identify fonts
-            with remarkable accuracy. Features text region detection, confidence filtering, and ensemble predictions.
+            Upload screenshots, crop text regions, and let our enhanced AI
+            identify fonts with remarkable accuracy. Features text region
+            detection, confidence filtering, and ensemble predictions.
           </p>
 
           {/* Feature Cards */}
@@ -110,7 +111,8 @@ export const LandingPage = () => {
                 Enhanced AI Analysis
               </h3>
               <p className="text-gray-600 text-sm">
-                Get instant font identification with confidence scores and quality assessment
+                Get instant font identification with confidence scores and
+                quality assessment
               </p>
             </div>
           </div>
@@ -134,23 +136,9 @@ export const LandingPage = () => {
           {screenshots.length === 0 ? <UploadButton /> : <ImagePreview />}
         </div>
 
-        {/* Gallery Section */}
+        {/* Gallery and Results Section */}
         {screenshots.length > 1 && (
           <div>
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h3 className="text-2xl font-semibold text-gray-900">
-                  Upload History
-                </h3>
-                <p className="text-gray-600 mt-1">
-                  Previously uploaded images for font analysis
-                </p>
-              </div>
-              <div className="flex items-center space-x-2 text-sm text-gray-500">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>{screenshots.length - 1} previous uploads</span>
-              </div>
-            </div>
             <ScreenshotGallery />
           </div>
         )}

@@ -1,7 +1,7 @@
 import { X, Upload, Crop, Eye, Sparkles, Loader2, Target } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
 import { useRef } from "react";
-import { EnhancedFontResult } from "./EnhancedFontResult";
+import { FontResultList } from "./FontResultList";
 import { LoadingSpinner } from "./LoadingSpinner";
 
 export const ImagePreview = () => {
@@ -186,13 +186,15 @@ export const ImagePreview = () => {
           </div>
         </div>
 
-        {/* Enhanced Font Result */}
+        {/* Font Result List */}
         {latestScreenshot.fontResult && (
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <EnhancedFontResult
+            <FontResultList
               result={latestScreenshot.fontResult}
               onRetry={handleIdentifyFont}
-              service="storia"
+              imageUrl={
+                latestScreenshot.croppedImage || latestScreenshot.preview
+              }
             />
           </div>
         )}

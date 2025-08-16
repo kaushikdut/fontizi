@@ -125,7 +125,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Mark as identifying
     set((state) => ({
       screenshots: state.screenshots.map((s) =>
-        s.id === id ? { ...s, isIdentifying: true, confidenceThreshold: threshold } : s
+        s.id === id
+          ? { ...s, isIdentifying: true, confidenceThreshold: threshold }
+          : s
       ),
     }));
 

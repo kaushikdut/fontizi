@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
-import { Wifi, WifiOff, CheckCircle, AlertCircle, Sparkles, Info } from "lucide-react";
+import { CheckCircle, AlertCircle, Sparkles } from "lucide-react";
 import { useAppStore } from "../store/useAppStore";
-import { checkBackendHealth, getStoriaModelStatus } from "../services/fontIdentification";
+import {
+  checkBackendHealth,
+  getStoriaModelStatus,
+} from "../services/fontIdentification";
 
 export const BackendStatus = () => {
   const { backendConnected, setBackendConnected } = useAppStore();
@@ -13,7 +16,7 @@ export const BackendStatus = () => {
       try {
         const isHealthy = await checkBackendHealth();
         setBackendConnected(isHealthy);
-        
+
         // If backend is healthy, get model status
         if (isHealthy) {
           try {
@@ -57,64 +60,107 @@ export const BackendStatus = () => {
               <Sparkles className="w-4 h-4 text-blue-600" />
               <h4 className="font-medium text-gray-900">Enhanced Features</h4>
             </div>
-            
+
             {modelStatus && (
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Model Status:</span>
-                  <span className={`font-medium ${modelStatus.available ? 'text-green-600' : 'text-red-600'}`}>
-                    {modelStatus.available ? 'Available' : 'Unavailable'}
+                  <span
+                    className={`font-medium ${
+                      modelStatus.available ? "text-green-600" : "text-red-600"
+                    }`}
+                  >
+                    {modelStatus.available ? "Available" : "Unavailable"}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Text Detection:</span>
-                  <span className={`font-medium ${modelStatus.enhanced_features?.text_region_detection ? 'text-green-600' : 'text-gray-400'}`}>
-                    {modelStatus.enhanced_features?.text_region_detection ? 'Enabled' : 'Disabled'}
+                  <span
+                    className={`font-medium ${
+                      modelStatus.enhanced_features?.text_region_detection
+                        ? "text-green-600"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {modelStatus.enhanced_features?.text_region_detection
+                      ? "Enabled"
+                      : "Disabled"}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Confidence Filtering:</span>
-                  <span className={`font-medium ${modelStatus.enhanced_features?.confidence_thresholding ? 'text-green-600' : 'text-gray-400'}`}>
-                    {modelStatus.enhanced_features?.confidence_thresholding ? 'Enabled' : 'Disabled'}
+                  <span
+                    className={`font-medium ${
+                      modelStatus.enhanced_features?.confidence_thresholding
+                        ? "text-green-600"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {modelStatus.enhanced_features?.confidence_thresholding
+                      ? "Enabled"
+                      : "Disabled"}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Image Enhancement:</span>
-                  <span className={`font-medium ${modelStatus.enhanced_features?.image_enhancement ? 'text-green-600' : 'text-gray-400'}`}>
-                    {modelStatus.enhanced_features?.image_enhancement ? 'Enabled' : 'Disabled'}
+                  <span
+                    className={`font-medium ${
+                      modelStatus.enhanced_features?.image_enhancement
+                        ? "text-green-600"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {modelStatus.enhanced_features?.image_enhancement
+                      ? "Enabled"
+                      : "Disabled"}
                   </span>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Ensemble Predictions:</span>
-                  <span className={`font-medium ${modelStatus.enhanced_features?.ensemble_predictions ? 'text-green-600' : 'text-gray-400'}`}>
-                    {modelStatus.enhanced_features?.ensemble_predictions ? 'Enabled' : 'Disabled'}
+                  <span
+                    className={`font-medium ${
+                      modelStatus.enhanced_features?.ensemble_predictions
+                        ? "text-green-600"
+                        : "text-gray-400"
+                    }`}
+                  >
+                    {modelStatus.enhanced_features?.ensemble_predictions
+                      ? "Enabled"
+                      : "Disabled"}
                   </span>
                 </div>
-                
+
                 <div className="pt-2 border-t border-gray-100">
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Min Confidence:</span>
                     <span className="font-medium text-gray-900">
-                      {(modelStatus.confidence_thresholds?.min_confidence * 100).toFixed(0)}%
+                      {(
+                        modelStatus.confidence_thresholds?.min_confidence * 100
+                      ).toFixed(0)}
+                      %
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">High Confidence:</span>
                     <span className="font-medium text-gray-900">
-                      {(modelStatus.confidence_thresholds?.high_confidence * 100).toFixed(0)}%
+                      {(
+                        modelStatus.confidence_thresholds?.high_confidence * 100
+                      ).toFixed(0)}
+                      %
                     </span>
                   </div>
                 </div>
               </div>
             )}
-            
+
             <div className="mt-3 pt-2 border-t border-gray-100">
               <p className="text-xs text-gray-500">
-                Enhanced AI with text region detection, confidence filtering, and ensemble predictions for better accuracy.
+                Enhanced AI with text region detection, confidence filtering,
+                and ensemble predictions for better accuracy.
               </p>
             </div>
           </div>

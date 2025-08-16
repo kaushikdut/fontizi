@@ -86,7 +86,7 @@ export const FontResult = ({ result, onRetry }: FontResultProps) => {
       </div>
 
       {/* Alternative Predictions */}
-      {result.prediction.alternatives &&
+      {result.prediction?.alternatives &&
         result.prediction.alternatives.length > 0 && (
           <div>
             <h4 className="text-sm font-semibold text-gray-700 mb-3">

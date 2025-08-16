@@ -1,10 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Download,
   Sparkles,
   AlertCircle,
   Info,
-  ExternalLink,
   CheckCircle,
   XCircle,
   Target,
@@ -15,20 +14,20 @@ import {
 import type {
   FontIdentificationResult,
   StoriaFontResult,
-  FontDownloadResult,
 } from "../services/fontIdentification";
-import { downloadGoogleFont, submitAccuracyFeedback } from "../services/fontIdentification";
+import {
+  downloadGoogleFont,
+  submitAccuracyFeedback,
+} from "../services/fontIdentification";
 
 interface EnhancedFontResultProps {
   result: FontIdentificationResult | StoriaFontResult;
   onRetry?: () => void;
-  service?: "deepfont" | "storia";
 }
 
 export const EnhancedFontResult = ({
   result,
   onRetry,
-  service = "storia",
 }: EnhancedFontResultProps) => {
   const [downloadStatus, setDownloadStatus] = useState<
     "idle" | "downloading" | "success" | "error"
@@ -53,11 +52,14 @@ export const EnhancedFontResult = ({
         textRegionsDetected: result.font_info.text_regions_detected,
         predictionQuality: result.font_info.prediction_quality,
       };
-    } else if ("prediction" in result) {
+    } else if ("prediction" in result && result.prediction) {
+      const fontResult = result as FontIdentificationResult;
+      const confidence = fontResult.confidence || 0;
       return {
         name: result.prediction.font,
         confidence: result.prediction.confidence,
-        confidenceLevel: result.confidence >= 0.7 ? "high" : result.confidence >= 0.3 ? "medium" : "low",
+        confidenceLevel:
+          confidence >= 0.7 ? "high" : confidence >= 0.3 ? "medium" : "low",
         category: result.prediction.category,
         alternatives: result.prediction.alternatives,
         downloadUrl: `https://fonts.google.com/specimen/${result.prediction.font.replace(
@@ -65,31 +67,41 @@ export const EnhancedFontResult = ({
           "+"
         )}`,
         googleFontsInfo: null,
-        textRegionsDetected: result.enhancement_info?.text_regions_detected || 0,
-        predictionQuality: result.confidence >= 0.7 ? "excellent" : result.confidence >= 0.5 ? "good" : "fair",
+        textRegionsDetected:
+          result.enhancement_info?.text_regions_detected || 0,
+        predictionQuality:
+          confidence >= 0.7 ? "excellent" : confidence >= 0.5 ? "good" : "fair",
       };
-    } else if (result.font && result.confidence) {
+    } else if (
+      "font" in result &&
+      result.font &&
+      "confidence" in result &&
+      result.confidence
+    ) {
       // Handle new response format with font info at root level
+      const fontResult = result as FontIdentificationResult;
+      const confidence = fontResult.confidence || 0;
+      const font = fontResult.font || "Unknown";
       return {
-        name: result.font,
-        confidence: result.confidence,
-        confidenceLevel: result.confidence >= 0.7 ? "high" : result.confidence >= 0.3 ? "medium" : "low",
-        category: result.category || "Unknown",
+        name: font,
+        confidence: confidence,
+        confidenceLevel:
+          confidence >= 0.7 ? "high" : confidence >= 0.3 ? "medium" : "low",
+        category: fontResult.category || "Unknown",
         alternatives:
-          result.alternatives?.map((alt) => ({
+          fontResult.alternatives?.map((alt) => ({
             name: alt.name,
             confidence: alt.confidence,
             category: alt.category,
           })) || [],
         downloadUrl:
-          result.download_url ||
-          `https://fonts.google.com/specimen/${result.font.replace(
-            /\s+/g,
-            "+"
-          )}`,
+          fontResult.download_url ||
+          `https://fonts.google.com/specimen/${font.replace(/\s+/g, "+")}`,
         googleFontsInfo: null,
-        textRegionsDetected: result.enhancement_info?.text_regions_detected || 0,
-        predictionQuality: result.confidence >= 0.7 ? "excellent" : result.confidence >= 0.5 ? "good" : "fair",
+        textRegionsDetected:
+          fontResult.enhancement_info?.text_regions_detected || 0,
+        predictionQuality:
+          confidence >= 0.7 ? "excellent" : confidence >= 0.5 ? "good" : "fair",
       };
     }
     return null;
@@ -143,14 +155,14 @@ export const EnhancedFontResult = ({
   };
 
   const handleDownload = async () => {
-    if (!fontInfo.downloadUrl) return;
+    if (!fontInfo.downloadUrl || !fontInfo.name) return;
 
     setDownloadStatus("downloading");
     setDownloadMessage("Downloading font...");
 
     try {
       const downloadResult = await downloadGoogleFont(fontInfo.name);
-      
+
       if (downloadResult.success) {
         setDownloadStatus("success");
         setDownloadMessage("Font downloaded successfully!");
@@ -196,33 +208,41 @@ export const EnhancedFontResult = ({
               {fontInfo.name}
             </h3>
             <p className="text-gray-600 mb-3">{fontInfo.category}</p>
-            
+
             {/* Enhanced Metrics */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-              <div className={`px-3 py-2 rounded-lg border text-sm font-medium ${getConfidenceColor(fontInfo.confidenceLevel)}`}>
+              <div
+                className={`px-3 py-2 rounded-lg border text-sm font-medium ${getConfidenceColor(
+                  fontInfo.confidenceLevel
+                )}`}
+              >
                 <div className="flex items-center space-x-1">
                   <Target className="w-3 h-3" />
                   <span>Confidence: {fontInfo.confidenceLevel}</span>
                 </div>
                 <div className="text-xs mt-1">
-                  {(fontInfo.confidence * 100).toFixed(1)}%
+                  {((fontInfo.confidence || 0) * 100).toFixed(1)}%
                 </div>
               </div>
-              
-              <div className={`px-3 py-2 rounded-lg border text-sm font-medium ${getQualityColor(fontInfo.predictionQuality)}`}>
+
+              <div
+                className={`px-3 py-2 rounded-lg border text-sm font-medium ${getQualityColor(
+                  fontInfo.predictionQuality
+                )}`}
+              >
                 <div className="flex items-center space-x-1">
                   <TrendingUp className="w-3 h-3" />
                   <span>Quality: {fontInfo.predictionQuality}</span>
                 </div>
               </div>
-              
+
               <div className="px-3 py-2 rounded-lg border text-sm font-medium text-blue-600 bg-blue-50 border-blue-200">
                 <div className="flex items-center space-x-1">
                   <Eye className="w-3 h-3" />
                   <span>Text Regions: {fontInfo.textRegionsDetected}</span>
                 </div>
               </div>
-              
+
               <div className="px-3 py-2 rounded-lg border text-sm font-medium text-purple-600 bg-purple-50 border-purple-200">
                 <div className="flex items-center space-x-1">
                   <Zap className="w-3 h-3" />
@@ -231,7 +251,7 @@ export const EnhancedFontResult = ({
               </div>
             </div>
           </div>
-          
+
           <div className="flex flex-col space-y-2">
             {fontInfo.downloadUrl && (
               <button
@@ -243,7 +263,7 @@ export const EnhancedFontResult = ({
                 <span>Download</span>
               </button>
             )}
-            
+
             <button
               onClick={() => setShowFeedback(!showFeedback)}
               className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
@@ -272,7 +292,9 @@ export const EnhancedFontResult = ({
         {/* Feedback Form */}
         {showFeedback && !feedbackSubmitted && (
           <div className="bg-gray-50 rounded-lg p-4 mb-4">
-            <h4 className="font-medium text-gray-900 mb-2">Help Improve Accuracy</h4>
+            <h4 className="font-medium text-gray-900 mb-2">
+              Help Improve Accuracy
+            </h4>
             <textarea
               placeholder="Was this prediction correct? Any feedback to help improve accuracy?"
               className="w-full p-3 border border-gray-300 rounded-lg resize-none"
@@ -280,13 +302,17 @@ export const EnhancedFontResult = ({
             />
             <div className="flex space-x-2 mt-2">
               <button
-                onClick={() => handleFeedbackSubmit({ comment: "Correct prediction" })}
+                onClick={() =>
+                  handleFeedbackSubmit({ comment: "Correct prediction" })
+                }
                 className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
               >
                 Correct
               </button>
               <button
-                onClick={() => handleFeedbackSubmit({ comment: "Incorrect prediction" })}
+                onClick={() =>
+                  handleFeedbackSubmit({ comment: "Incorrect prediction" })
+                }
                 className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
               >
                 Incorrect
@@ -304,7 +330,9 @@ export const EnhancedFontResult = ({
         {feedbackSubmitted && (
           <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
             <CheckCircle className="w-4 h-4 text-green-600" />
-            <span className="text-green-700 text-sm">Thank you for your feedback!</span>
+            <span className="text-green-700 text-sm">
+              Thank you for your feedback!
+            </span>
           </div>
         )}
       </div>
@@ -312,27 +340,36 @@ export const EnhancedFontResult = ({
       {/* Alternatives */}
       {fontInfo.alternatives && fontInfo.alternatives.length > 0 && (
         <div className="mb-6">
-          <h4 className="text-lg font-semibold text-gray-900 mb-3">Alternative Fonts</h4>
+          <h4 className="text-lg font-semibold text-gray-900 mb-3">
+            Alternative Fonts
+          </h4>
           <div className="space-y-2">
-            {fontInfo.alternatives.slice(0, 5).map((alt, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-              >
-                <div>
-                  <p className="font-medium text-gray-900">{alt.name}</p>
-                  <p className="text-sm text-gray-600">{alt.category}</p>
+            {fontInfo.alternatives
+              .slice(0, 5)
+              .map((alt: any, index: number) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900">{alt.name}</p>
+                    <p className="text-sm text-gray-600">{alt.category}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">
+                      {(alt.confidence * 100).toFixed(1)}%
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {alt.confidence_level ||
+                        (alt.confidence >= 0.7
+                          ? "high"
+                          : alt.confidence >= 0.3
+                          ? "medium"
+                          : "low")}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">
-                    {(alt.confidence * 100).toFixed(1)}%
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {alt.confidence_level || (alt.confidence >= 0.7 ? "high" : alt.confidence >= 0.3 ? "medium" : "low")}
-                  </p>
-                </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       )}
@@ -340,11 +377,16 @@ export const EnhancedFontResult = ({
       {/* Enhanced Metadata */}
       {result.metadata && (
         <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-gray-900 mb-2">Analysis Details</h4>
+          <h4 className="text-sm font-medium text-gray-900 mb-2">
+            Analysis Details
+          </h4>
           <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
             <div>File: {result.metadata.filename}</div>
             <div>Size: {(result.metadata.file_size / 1024).toFixed(1)} KB</div>
-            <div>Threshold: {(result.metadata.confidence_threshold_used * 100).toFixed(0)}%</div>
+            <div>
+              Threshold:{" "}
+              {(result.metadata.confidence_threshold_used * 100).toFixed(0)}%
+            </div>
             <div>Status: {result.metadata.preprocessing_status}</div>
           </div>
         </div>
@@ -368,11 +410,9 @@ export const EnhancedFontResult = ({
 export const EnhancedFontResultError = ({
   error,
   onRetry,
-  service = "deepfont",
 }: {
   error: string;
   onRetry?: () => void;
-  service?: "deepfont" | "storia";
 }) => {
   return (
     <div className="bg-red-50/80 backdrop-blur-sm rounded-2xl p-6 border border-red-200/50">
@@ -383,9 +423,7 @@ export const EnhancedFontResultError = ({
             Font Identification Failed
           </h3>
           <p className="text-red-700 mb-4">{error}</p>
-          <div className="text-sm text-red-600 mb-4">
-            Service: {service === "storia" ? "Storia AI" : "DeepFont"}
-          </div>
+          <div className="text-sm text-red-600 mb-4">Service: Storia AI</div>
           {onRetry && (
             <button
               onClick={onRetry}

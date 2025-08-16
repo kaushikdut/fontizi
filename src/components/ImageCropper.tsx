@@ -35,7 +35,7 @@ export const ImageCropper = ({ onClose }: ImageCropperProps) => {
   const [isCropping, setIsCropping] = useState<boolean>(false);
 
   const onCropComplete = useCallback(
-    (croppedArea: CropArea, croppedAreaPixels: CroppedAreaPixels) => {
+    (_croppedArea: CropArea, croppedAreaPixels: CroppedAreaPixels) => {
       // Store the crop data for later use
       setCropData(croppedAreaPixels);
     },
